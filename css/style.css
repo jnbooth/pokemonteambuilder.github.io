@@ -244,6 +244,10 @@ a.serebii_link:not(.icon):hover, a.serebii_link:visited:not(.icon):hover {
     padding-bottom: 10px;
 }
 
+.ability {
+    min-width: 200px;
+}
+
 .picon_border {
     position: relative;
 }

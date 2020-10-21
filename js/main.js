@@ -16,6 +16,10 @@ var numTypesFiltered = 0;
 var ALL_TYPES = ["Bug", "Dark", "Dragon",  "Electric", "Fairy", "Fighting", "Fire", "Flying", "Ghost", "Grass", "Ground", "Ice", "Normal", "Poison", "Psychic", "Rock", "Steel", "Water"];
 var TECHNOBLAST_TYPES = ["Normal", "Electric", "Fire", "Water"];
 
+var TYPE_ABILITIES = { Aerilate: "Flying", Galvanize: "Electric", Pixilate: "Fairy", Refrigerate: "Ice" }
+
+var SOUND = new Set(["confide", "disarmingvoice", "echoedvoice", "growl", "hypervoice", "perishsong", "round", "sing", "uproar"]);
+
 var GEN_CUTOFFS = [0, 151, 251, 386, 493, 649, 721, 809, 893];
 
 var numSelected = 0;
@@ -53,6 +57,8 @@ function addSelected(pkey, notify, reloadLink) {
     $("#sp_box_" + index).find(".sp_icon").html(getIconString(POKEDEX[pkey], pkey));
     // Add the delete button
     $("#sp_box_" + index).find(".sp_delete").html("<a title=\"Remove\" href= \"javascript:removeSelected('" + pkey + "', true)\"><button class=\"delete\"></button></a>");
+    // Add abilities
+    addAbilities(pkey, index);
     // Add the attacks
     addAttacks(pkey, index);
 
@@ -108,6 +114,7 @@ function generateShareLink() {
     var middle = "";
     for (var i = 0; i < numSelected; i++) {
         middle += "p_" + currentSelected[i] + "+";
+        middle += "b_" + encodeURIComponent($("#sp_box_" + i).find(".ability").val()) + "+";
         for (var j = 1; j <= 4; j++) {
             var attack = $("#sp_box_" + i).find(".sp_attack" + j).val();
             if (attack != "-") {
@@ -138,6 +145,14 @@ function getSerebiiLink(pkey) {
         num = "0" + num;
     }
     return prefix + num + suffix;
+}
+
+
+function addAbilities(pkey, pindex) {
+    for (var ability of Object.values(POKEDEX[pkey].abilities)) {
+        $("#sp_box_" + pindex).find(".ability").append("<option>" + ability +"</option>");
+    }
+    $("#sp_box_" + pindex).find(".ability_row").removeClass("hidden");
 }
 
 
@@ -213,6 +228,21 @@ function addAttacks(pkeyOrig, pindex) {
 }
 
 
+var del;
+
+
+function abilityChanged(selector, wasClicked) {
+    del = selector;
+    for (var i = 1; i <= 4; i++) {
+        attackChanged($(selector).parent().parent().parent().parent().find(".sp_attack" + i)[0], "sp_attack" + i, false);
+    }
+    if (wasClicked == true) {
+        calculateCoverage();
+        generateShareLink();
+    }
+}
+
+
 function attackChanged(selector, whichatk, wasClicked) {
     var label = $(selector).parent().parent().parent().find("." + whichatk + "_type");
     if (selector.value == "-") {
@@ -227,12 +257,19 @@ function attackChanged(selector, whichatk, wasClicked) {
             $(label).removeClass(classes[i]);
         }
     }
+    var ability = $(selector).parent().parent().parent().parent().find(".ability").val();
     // Change type for some Pokemon
-    if (attackkey == "multiattack") {
+    if (ability == "Normalize") {
+        type = "Normal";
+    } else if (ability == "Liquid Voice" && SOUND.has(attackkey)) {
+        type = "Water";
+    } else if (attackkey == "multiattack") {
         type = $(selector).parent().parent().parent().parent().find(".sp_type1").text();
     }
     else if (attackkey == "revelationdance") {
         type = $(selector).parent().parent().parent().parent().find(".sp_type1").text();
+    } else if (type == "Normal") {
+        type = TYPE_ABILITIES[ability] || type;
     }
     $(label).addClass("tag_type_" + type);
     $(label).text(type);
@@ -822,8 +859,10 @@ function loadFromHash(hash) {
             pcount += 1;
             acount = 1;
             addSelected(part.substring(2, part.length), false, false);
-        }
-        else if (part.indexOf("a_") != -1) {
+        } else if (part.indexOf("b_") != -1) {
+            $("#sp_box_" + pcount).find(".ability").val(decodeURIComponent(part.substring(2, part.length)));
+            abilityChanged(document.getElementById("sp_box_" + pcount).getElementsByClassName("ability")[0], false);
+        } else if (part.indexOf("a_") != -1) {
             var attackkey = part.substring(2, part.length);
             var type = "";
             if (attackkey.indexOf("_") != -1) {
